@@ -343,6 +343,19 @@ class RH_RF95 : public RHUartDriver<T> {
     /// \return true if sleep mode was successfully entered.
     virtual bool sleep();
 
+    /// brian.n.norman@gmail.com 9th Nov 2018
+    /// Sets the radio spreading factor.
+    /// valid values are 6 through 12.
+    /// Out of range values below 6 are clamped to 6
+    /// Out of range values above 12 are clamped to 12
+    /// See Semtech DS SX1276/77/78/79 page 27 regarding SF6 configuration.
+    ///
+    /// \param[in] uint8_t sf (spreading factor 6..12)
+    /// \return nothing
+    void setSpreadingFactor(uint8_t sf);
+
+    void setLowDatarate();
+
 
 
   protected:

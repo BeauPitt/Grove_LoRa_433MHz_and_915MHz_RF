@@ -2,6 +2,8 @@
 Grove LoRa 433MHz and 915MHz RF
 ===
 
+**Fork**: adding [`setSpreadingFactor()`](https://www.airspayce.com/mikem/arduino/RadioHead/classRH__RF95.html#abea770963212a64b35169f0f0c35c14d).
+
 <img src=https://statics3.seeedstudio.com/seeed/img/2016-12/FPmEiPVYRqYuj01MQ9hMGYvZ.jpg width=400>
 
 Grove_LoRa_firmware:

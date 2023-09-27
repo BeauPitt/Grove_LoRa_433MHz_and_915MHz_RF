@@ -306,6 +306,76 @@ void RH_RF95<T>::setTxPower(int8_t power, bool useRFO) {
     }
 }
 
+
+///////////////////////////////////////////////////
+//
+// additions below by Brian Norman 9th Nov 2018
+// brian.n.norman@gmail.com
+//
+// Routines intended to make changing BW, SF and CR
+// a bit more intuitive
+//
+///////////////////////////////////////////////////
+
+template <typename T>
+void RH_RF95<T>::setSpreadingFactor(uint8_t sf)
+{
+    if (sf <= 6)
+        sf = RH_RF95_SPREADING_FACTOR_64CPS;
+    else if (sf == 7)
+        sf = RH_RF95_SPREADING_FACTOR_128CPS;
+    else if (sf == 8)
+        sf = RH_RF95_SPREADING_FACTOR_256CPS;
+    else if (sf == 9)
+        sf = RH_RF95_SPREADING_FACTOR_512CPS;
+    else if (sf == 10)
+        sf = RH_RF95_SPREADING_FACTOR_1024CPS;
+    else if (sf == 11)
+        sf = RH_RF95_SPREADING_FACTOR_2048CPS;
+    else if (sf >= 12)
+        sf = RH_RF95_SPREADING_FACTOR_4096CPS;
+
+    // set the new spreading factor
+    this->write(RH_RF95_REG_1E_MODEM_CONFIG2, (this->read(RH_RF95_REG_1E_MODEM_CONFIG2) & ~RH_RF95_SPREADING_FACTOR) | sf);
+    // check if Low data Rate bit should be set or cleared
+    setLowDatarate();
+}
+
+template <typename T>
+void RH_RF95<T>::setLowDatarate()
+{
+    // called after changing bandwidth and/or spreading factor
+    //  Semtech modem design guide AN1200.13 says
+    // "To avoid issues surrounding  drift  of  the  crystal  reference  oscillator  due  to  either  temperature  change
+    // or  motion,the  low  data  rate optimization  bit  is  used. Specifically for 125  kHz  bandwidth  and  SF  =  11  and  12,
+    // this  adds  a  small  overhead  to increase robustness to reference frequency variations over the timescale of the LoRa packet."
+
+    // read current value for BW and SF
+    uint8_t BW = this->read(RH_RF95_REG_1D_MODEM_CONFIG1) >> 4; // bw is in bits 7..4
+    uint8_t SF = this->read(RH_RF95_REG_1E_MODEM_CONFIG2) >> 4; // sf is in bits 7..4
+
+    // calculate symbol time (see Semtech AN1200.22 section 4)
+    float bw_tab[] = {7800, 10400, 15600, 20800, 31250, 41700, 62500, 125000, 250000, 500000};
+
+    float bandwidth = bw_tab[BW];
+
+    float symbolTime = 1000.0 * pow(2, SF) / bandwidth; // ms
+
+    // the symbolTime for SF 11 BW 125 is 16.384ms.
+    // and, according to this :-
+    // https://www.thethingsnetwork.org/forum/t/a-point-to-note-lora-low-data-rate-optimisation-flag/12007
+    // the LDR bit should be set if the Symbol Time is > 16ms
+    // So the threshold used here is 16.0ms
+
+    // the LDR is bit 3 of RH_RF95_REG_26_MODEM_CONFIG3
+    uint8_t current = this->read(RH_RF95_REG_26_MODEM_CONFIG3) & ~RH_RF95_LOW_DATA_RATE_OPTIMIZE; // mask off the LDR bit
+    if (symbolTime > 16.0)
+        this->write(RH_RF95_REG_26_MODEM_CONFIG3, current | RH_RF95_LOW_DATA_RATE_OPTIMIZE);
+    else
+        this->write(RH_RF95_REG_26_MODEM_CONFIG3, current);
+}
+
+
 // Sets registers from a canned modem configuration structure
 template <typename T>
 void RH_RF95<T>::setModemRegisters(const ModemConfig* config) {
